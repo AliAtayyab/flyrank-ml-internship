@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Content Refresh Prioritization | FlyRank Capstone</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --border: #334155;
+      --table-header: #0f172a;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.65;
+      color: var(--text-main);
+      background-color: var(--bg);
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px 80px 24px;
+    }
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+      margin-bottom: 36px;
+    }
+    h1 {
+      font-size: 2.1rem;
+      line-height: 1.25;
+      color: #ffffff;
+      margin-bottom: 12px;
+    }
+    .meta {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .meta a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    h2 {
+      font-size: 1.4rem;
+      color: var(--accent);
+      margin-top: 36px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    h3 {
+      font-size: 1.15rem;
+      color: #e2e8f0;
+      margin-top: 24px;
+    }
+    p, li {
+      color: #cbd5e1;
+    }
+    .abstract-box {
+      background: var(--card-bg);
+      border-left: 4px solid var(--accent);
+      padding: 20px;
+      border-radius: 6px;
+      margin-bottom: 30px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: var(--card-bg);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+    th {
+      background: var(--table-header);
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: #090d16;
+      border-radius: 4px;
+    }
+    code {
+      padding: 2px 6px;
+      font-size: 0.9em;
+      color: var(--accent);
+    }
+    pre {
+      padding: 16px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+    }
+    footer {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    footer a {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="badge">FlyRank ML Internship Capstone</span>
+      <h1>Predicting Organic Search Momentum Decay: An Honest Machine Learning Framework for Content Refresh Prioritization</h1>
+      <div class="meta">
+        <strong>Author:</strong> Ali Atayyab &nbsp;|&nbsp; 
+        <strong>Lane:</strong> Refresh / Content Opportunity Scoring &nbsp;|&nbsp;
+        <strong>Repository:</strong> <a href="https://github.com/AliAtayyab/flyrank-ml-internship" target="_blank">github.com/AliAtayyab/flyrank-ml-internship</a>
+      </div>
+    </header>
+
+    <div class="abstract-box">
+      <h3>Abstract</h3>
+      <p>
+        Organic search traffic decays non-linearly over time as competitor content emerges and user intent shifts, yet editorial teams rely on naive heuristics or unranked manual audits to decide what to update. This research frames content refresh prioritization as a binary decay scoring task evaluated via <code>Precision@50</code>. Using anonymized, enterprise multi-client search logs from the FlyRank warehouse, we benchmark hand-written threshold heuristics against tree ensemble architectures under client-holdout validation. The Gradient Boosting model achieves an 80.00% Precision@50, outperforming fixed heuristic rules by over 3x while identifying high-value pages experiencing momentum decay before complete traffic evaporation. These results provide content operations with an interpretable, prioritized action queue with distinct reason codes.
+      </p>
+    </div>
+
+    <h2>1. Introduction & Problem Statement</h2>
+    <p>
+      For enterprise SEO and editorial operations, content production accounts for substantial capital expenditure, yet content maintenance is often reactive. Pages that steadily lose position and impression volume are typically only diagnosed after revenue impact is realized.
+    </p>
+    <p>
+      Editorial bandwidth is constrained: an editorial team can realistically refresh only 20 to 50 URLs per cycle. The core decision is <strong>resource allocation</strong>: determining which declining URLs yield the highest return on editorial intervention. A false positive consumes writing budget on a stable page, while a false negative permanently forfeits search equity to competitors.
+    </p>
+
+    <h2>2. Data Contract & Public-Safe Slice</h2>
+    <p>
+      The dataset comprises anonymized Google Search Console logs provided via the <code>FlyRank/internship-warehouse</code> release.
+    </p>
+    <ul>
+      <li><strong>Unit of Analysis (Grain):</strong> Exactly one row per unique URL (<code>page_id</code>) per client.</li>
+      <li><strong>Observation Window:</strong> Mid-panel historical snapshots (30-day baseline vs. prior 30-day window) evaluated on <code>month=2026-03</code>.</li>
+      <li><strong>Target Proxy:</strong> <code>is_declining_label</code> (Binary flag indicating traffic drop of >20% across observation boundaries).</li>
+      <li><strong>Deliberate Exclusions:</strong> Future-window impression metrics and downstream conversion totals were strictly excluded at inference time to guarantee zero temporal leakage.</li>
+    </ul>
+
+    <h2>3. Methodology & Validation Design</h2>
+    <p>
+      A key failure mode in SEO machine learning is cross-client leakage: random train/test splits allow models to memorize domain-level traffic magnitude rather than generalizable decay signals.
+    </p>
+    <p>
+      We enforce <strong>Client-Holdout Validation (GroupSplit)</strong>, ensuring that 20% of client domains are held out strictly for out-of-sample testing.
+    </p>
+
+    <h3>Feature Engineering</h3>
+    <p>Five leak-free, decision-time features were extracted:</p>
+    <ol>
+      <li><code>content_age_days</code>: CMS metadata tracking days since initial publication.</li>
+      <li><code>impressions_prev_30d</code>: Trailing search exposure from 31–60 days prior.</li>
+      <li><code>impressions_last_30d</code>: Recent search exposure from the past 30 days.</li>
+      <li><code>drop_volume</code>: Absolute historical impression volume lost (<code>prev_30d - last_30d</code>).</li>
+      <li><code>momentum_ratio</code>: Relative velocity ratio (<code>last_30d / (prev_30d + 1)</code>).</li>
+    </ol>
+
+    <h2>4. Results & Benchmark Comparison</h2>
+    <p>
+      Models were evaluated on the held-out client partition using <strong>Precision@50</strong> (the proportion of genuinely declining pages in the top-50 prioritized recommendations):
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Model / Strategy</th>
+          <th>Precision@50</th>
+          <th>ROC-AUC</th>
+          <th>Validation Scheme</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Fixed Hand-Coded Heuristic (Baseline)</strong></td>
+          <td>24.00%</td>
+          <td>—</td>
+          <td>Client-Holdout</td>
+        </tr>
+        <tr>
+          <td><strong>Decision Tree (max_depth=3)</strong></td>
+          <td>72.00%</td>
+          <td>0.741</td>
+          <td>Client-Holdout</td>
+        </tr>
+        <tr>
+          <td><strong>Random Forest Classifier</strong></td>
+          <td>78.00%</td>
+          <td>0.812</td>
+          <td>Client-Holdout</td>
+        </tr>
+        <tr>
+          <td><strong>Gradient Boosting (Final Model)</strong></td>
+          <td><strong>80.00%</strong></td>
+          <td><strong>0.834</strong></td>
+          <td>Client-Holdout</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Ranked Recommendations & Action Playbook</h2>
+    <p>
+      Raw probability scores are mapped into prioritized editorial workflows with interpretable reason codes:
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Priority Tier</th>
+          <th>Reason Code</th>
+          <th>Trigger Signals</th>
+          <th>Recommended Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge">Tier 1: Immediate</span></td>
+          <td><code>HIGH_VOLUME_DECAY_STALE</code></td>
+          <td>Score > 0.80, Age > 180d, Drop > 500 impressions</td>
+          <td>Full content rewrite, update statistics, refresh title tags & H2 headings.</td>
+        </tr>
+        <tr>
+          <td><span class="badge">Tier 2: Moderate</span></td>
+          <td><code>MODERATE_TRAFFIC_DROP</code></td>
+          <td>Score 0.50–0.79, Momentum < 0.70</td>
+          <td>Add internal links from newer articles, expand FAQ schema.</td>
+        </tr>
+        <tr>
+          <td><span class="badge">Tier 3: Passive</span></td>
+          <td><code>ROUTINE_AUDIT</code></td>
+          <td>Score < 0.50, Stable position</td>
+          <td>Monitor only; no editorial intervention required.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>6. Limitations & Observational Framing</h2>
+    <ul>
+      <li><strong>Observational, Not Causal:</strong> This model identifies statistical decay patterns in historical logs; it does not claim to reverse-engineer Google's proprietary search algorithms.</li>
+      <li><strong>Seasonality Blindness:</strong> A 30-day window can misclassify predictable holiday or seasonal demand drops as content obsolescence.</li>
+      <li><strong>Data Privacy:</strong> All client IDs, page paths, and proprietary domain metrics remain fully anonymized.</li>
+    </ul>
+
+    <h2>7. Reproducibility & Repository Access</h2>
+    <p>
+      The complete codebase, data contract audits, and executable Jupyter notebooks are version-controlled in the public GitHub repository:
+    </p>
+    <pre><code># Clone and run the pipeline
+git clone https://github.com/AliAtayyab/flyrank-ml-internship.git
+cd flyrank-ml-internship
+pip install -r requirements.txt
+python scripts/run_all.py</code></pre>
+
+    <footer>
+      <p>
+        <strong>Acknowledgments & Data Credit:</strong> Built on the <a href="https://flyrank.ai" target="_blank" rel="noopener">FlyRank ML Internship</a> dataset.
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
